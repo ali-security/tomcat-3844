@@ -111,6 +111,10 @@
         Fix bloom filter population for archive indexing when using a packed
         WAR containing one or more JAR files. (markt)
       </fix>
+      <fix>
+        Be proactive in cleaning up temporary files after a failed multi-part
+        upload rather than waiting for GC to do it. (markt)
+      </fix>
     </changelog>
   </subsection>
   <subsection name="Coyote">

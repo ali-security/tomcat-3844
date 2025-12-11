@@ -2572,8 +2572,10 @@ public class Request implements HttpServletRequest {
         upload.setFileCountMax(partLimit);
 
         parts = new ArrayList<>();
+        boolean success = false;
+        List<FileItem> items = null;
         try {
-            List<FileItem> items = upload.parseRequest(new ServletRequestContext(this));
+            items = upload.parseRequest(new ServletRequestContext(this));
             int maxPostSize = getConnector().getMaxPostSize();
             long postSize = 0;
             Charset charset = getCharset();
@@ -2609,6 +2611,7 @@ public class Request implements HttpServletRequest {
                 }
                 parts.add(part);
             }
+            success = true;
         } catch (InvalidContentTypeException e) {
             partsParseException = new ServletException(e);
         } catch (SizeException | FileCountLimitExceededException e) {
@@ -2619,6 +2622,24 @@ public class Request implements HttpServletRequest {
         } catch (IllegalStateException e) {
             checkSwallowInput();
             partsParseException = e;
+        } finally {
+            /*
+             * GC will delete any temporary copies of uploaded files left in the work directory but if we know that the
+             * upload has failed then explicitly clean up now.
+             */
+            if (!success) {
+                parts.clear();
+                if (items != null) {
+                    for (FileItem item : items) {
+                        try {
+                            item.delete();
+                        } catch (Throwable t) {
+                            ExceptionUtils.handleThrowable(t);
+                            log.warn(sm.getString("request.partCleanup.failed"), t);
+                        }
+                    }
+                }
+            }
         }
     }
 
